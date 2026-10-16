@@ -1,0 +1,1697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Book a table, manage your reservations, and run the front desk.">
+<title>Restaurant Reservation System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: hotel-style site. Dark header + hero with an overlapping booking bar, table "rooms" grid,
+   policies band, dark footer. Signed in: slim greeting band, tab strip, one work area. */
+:root {
+  --bg: #f3f3ef;
+  --surface: #ffffff;
+  --surface-2: #ebebe5;
+  --ink: #15201f;
+  --muted: #5b6563;
+  --line: #dadad2;
+  --accent: #1e4a4f;
+  --accent-ink: #ffffff;
+  --accent-soft: #dce9e8;
+  --gold: #a9844c;
+  --gold-soft: #f0e6d4;
+  --night: #0d2225;
+  --night-2: #143236;
+  --night-ink: #f2eee5;
+  --night-muted: #b4c0bc;
+  --brass: #c9a66b;
+  --ok: #2b7339; --ok-soft: #dff0df;
+  --warn: #8f5a00; --warn-soft: #f8ebd0;
+  --bad: #ab3528; --bad-soft: #f6dfda;
+  --info: #285a8c; --info-soft: #dde8f4;
+  --display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --body: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1313; --surface: #121c1c; --surface-2: #1a2626; --ink: #e9ece8; --muted: #9ba8a5; --line: #283635;
+    --accent: #8cc5c0; --accent-ink: #072022; --accent-soft: #19393a; --gold: #d3b17a; --gold-soft: #33291a;
+    --night: #071819; --night-2: #0f2729; --night-ink: #f2eee5; --night-muted: #a9b6b2; --brass: #d3b17a;
+    --ok: #7ccf8b; --ok-soft: #1b3120; --warn: #e4b05a; --warn-soft: #382a12; --bad: #ee8b7e; --bad-soft: #3b1e1a;
+    --info: #8db8e6; --info-soft: #1b2a3b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1313; --surface: #121c1c; --surface-2: #1a2626; --ink: #e9ece8; --muted: #9ba8a5; --line: #283635;
+  --accent: #8cc5c0; --accent-ink: #072022; --accent-soft: #19393a; --gold: #d3b17a; --gold-soft: #33291a;
+  --night: #071819; --night-2: #0f2729; --night-ink: #f2eee5; --night-muted: #a9b6b2; --brass: #d3b17a;
+  --ok: #7ccf8b; --ok-soft: #1b3120; --warn: #e4b05a; --warn-soft: #382a12; --bad: #ee8b7e; --bad-soft: #3b1e1a;
+  --info: #8db8e6; --info-soft: #1b2a3b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--night); }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0; line-height: 1.1; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.45rem; }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+.mono { font-family: var(--mono); font-size: 0.9em; letter-spacing: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.eyebrow, .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; }
+.label { color: var(--muted); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* header */
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--night); color: var(--night-ink); border-bottom: 1px solid rgba(201,166,107,.25); }
+.bar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; border: none; background: none; padding: 0; cursor: pointer; color: inherit; text-align: left; }
+.monogram { width: 40px; height: 40px; border: 1px solid var(--brass); border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 1.15rem; color: var(--brass); letter-spacing: 0.04em; flex: none; }
+.brand-name { font-family: var(--display); font-size: 1.3rem; font-weight: 600; line-height: 1; }
+.brand-sub { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.22em; color: var(--night-muted); margin-top: 4px; }
+.nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.nav .navlink { background: none; border: none; color: var(--night-ink); padding: 8px 10px; font-size: 0.85rem; letter-spacing: 0.04em; cursor: pointer; opacity: 0.85; }
+.nav .navlink:hover { opacity: 1; text-decoration: underline; text-underline-offset: 6px; text-decoration-color: var(--brass); }
+.nav .who { color: var(--night-muted); font-size: 0.85rem; padding: 0 6px; }
+.nav .who b { color: var(--night-ink); font-weight: 600; }
+@media (max-width: 720px) { .nav .navlink.opt { display: none; } }
+.notice { background: var(--gold-soft); color: var(--ink); font-size: 0.85rem; }
+.notice .wrap { padding-block: 8px; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 2px; padding: 10px 18px; font-weight: 600; font-size: 0.86rem; letter-spacing: 0.04em; cursor: pointer; line-height: 1.2; white-space: nowrap; color: var(--ink); }
+.btn:hover { border-color: var(--ink); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.gold { background: var(--brass); border-color: var(--brass); color: #1b1408; }
+.btn.gold:hover { filter: brightness(1.06); }
+.btn.ghost-light { background: transparent; color: var(--night-ink); border-color: rgba(242,238,229,.45); }
+.btn.ghost-light:hover { border-color: var(--night-ink); }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn.danger.solid { background: var(--bad); color: var(--surface); }
+.btn.small { padding: 6px 11px; font-size: 0.8rem; }
+.btn.link { border: none; background: none; padding: 4px 0; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+
+/* hero */
+.hero { background: var(--night); color: var(--night-ink); position: relative; overflow: hidden; }
+.hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 70px; background: var(--bg); }
+.hero .wrap { position: relative; z-index: 1; }
+.hero .hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); gap: 32px; align-items: center; padding-block: 56px 0; }
+.hero-copy { display: grid; gap: 18px; padding-bottom: 40px; }
+.hero .eyebrow { color: var(--brass); }
+.hero h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 500; line-height: 1.02; }
+.hero h1 em { font-style: italic; color: var(--brass); }
+.hero-lede { color: var(--night-muted); font-size: 1.05rem; max-width: 46ch; }
+.hero-art { width: 100%; max-width: 460px; height: auto; justify-self: end; display: block; }
+@media (max-width: 860px) {
+  .hero .hero-grid { grid-template-columns: minmax(0, 1fr); padding-block: 40px 0; }
+  .hero-art { max-width: 340px; justify-self: center; margin-top: -8px; }
+}
+.booking-bar { position: relative; z-index: 2; background: var(--surface); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(8,24,26,.18); padding: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 14px; align-items: start; }
+.booking-bar .field input { border-radius: 2px; }
+.booking-bar .go { padding-top: 26px; }
+.booking-bar .go .btn { height: 44px; padding-inline: 24px; }
+@media (max-width: 860px) { .booking-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } .booking-bar .go { grid-column: 1 / -1; padding-top: 0; } .booking-bar .go .btn { width: 100%; } }
+@media (max-width: 460px) { .booking-bar { grid-template-columns: minmax(0, 1fr); } }
+
+/* home sections */
+.home-main { padding-block: 0 0; }
+.block { padding-block: 64px; }
+.block-head { display: grid; gap: 10px; margin-bottom: 28px; max-width: 60ch; }
+.block-head .eyebrow { color: var(--gold); }
+.block-head p { color: var(--muted); }
+.rooms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+@media (max-width: 900px) { .rooms { grid-template-columns: minmax(0, 1fr); max-width: 520px; } }
+.room { background: var(--surface); border: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; min-width: 0; }
+.room-art { background: var(--surface-2); border-bottom: 1px solid var(--line); aspect-ratio: 13 / 8; max-width: 100%; display: grid; place-items: center; }
+.room-art svg { width: 82%; height: auto; }
+.ta-table { fill: var(--surface); stroke: var(--gold); stroke-width: 1.5; }
+.ta-chair { fill: var(--accent); }
+.ta-plate { fill: none; stroke: var(--muted); stroke-width: 1; }
+.ta-candle { fill: var(--gold); }
+.room-body { padding: 20px; display: grid; gap: 10px; align-content: start; }
+.room-body h3 { font-size: 1.7rem; }
+.room-facts { display: flex; gap: 6px 16px; flex-wrap: wrap; color: var(--muted); font-size: 0.88rem; }
+.room-price { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 6px; }
+.room-price b { font-family: var(--display); font-size: 1.6rem; font-weight: 600; }
+.room-price small { color: var(--muted); }
+.policies-band { background: var(--surface); border-block: 1px solid var(--line); }
+.policies { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
+@media (max-width: 900px) { .policies { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .policies { grid-template-columns: minmax(0, 1fr); } }
+.policy { display: grid; gap: 8px; align-content: start; border-top: 2px solid var(--gold); padding-top: 14px; }
+.policy h3 { font-size: 1.35rem; }
+.policy p { color: var(--muted); font-size: 0.92rem; }
+.footer { background: var(--night); color: var(--night-muted); font-size: 0.86rem; }
+.footer .wrap { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding-block: 32px; align-items: center; }
+.footer .brand-name { color: var(--night-ink); }
+.footer .btn.link { color: var(--brass); }
+
+/* account (sign in / register) */
+.account { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); min-height: 560px; border: 1px solid var(--line); background: var(--surface); margin-block: 40px 64px; }
+@media (max-width: 860px) { .account { grid-template-columns: minmax(0, 1fr); } }
+.account-side { background: var(--night); color: var(--night-ink); padding: 36px; display: grid; gap: 16px; align-content: start; }
+.account-side .eyebrow { color: var(--brass); }
+.account-side h1 { font-size: 2.5rem; font-weight: 500; }
+.account-side p { color: var(--night-muted); }
+.account-side .pending { border: 1px solid rgba(201,166,107,.4); padding: 14px; display: grid; gap: 4px; }
+.account-main { padding: 36px; display: grid; gap: 20px; align-content: start; min-width: 0; }
+@media (max-width: 520px) { .account-side, .account-main { padding: 22px; } }
+.seg { display: flex; gap: 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.seg button { border: none; background: none; padding: 10px 14px; font-weight: 600; font-size: 0.86rem; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+.seg button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); }
+
+/* forms */
+form { display: grid; gap: 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label, .field .flabel { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--muted); }
+.field input { width: 100%; border: 1px solid var(--line); border-radius: 2px; padding: 10px 12px; background: var(--surface); min-height: 44px; }
+.field input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.field.has-err input { border-color: var(--bad); }
+.err { color: var(--bad); font-size: 0.84rem; }
+.hint { color: var(--muted); font-size: 0.82rem; }
+.form-err { background: var(--bad-soft); color: var(--bad); padding: 10px 12px; font-size: 0.9rem; }
+.form-note { background: var(--gold-soft); padding: 12px 14px; font-size: 0.9rem; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.types { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 620px) { .types { grid-template-columns: minmax(0, 1fr); } }
+.field .type-opt { position: relative; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink); font-size: 0.9rem; }
+.type-opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; cursor: pointer; margin: 0; }
+.type-opt .box { border: 1px solid var(--line); padding: 14px; display: grid; gap: 4px; background: var(--surface); color: var(--ink); font-size: 0.9rem; }
+.type-opt input:checked + .box { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); background: var(--gold-soft); }
+.type-opt input:focus-visible + .box { outline: 2px solid var(--gold); outline-offset: 2px; }
+.type-opt .tname { font-family: var(--display); font-size: 1.35rem; font-weight: 600; }
+.type-opt .need { font-size: 0.8rem; color: var(--muted); }
+.type-opt .need.no { color: var(--bad); }
+.seats { display: flex; gap: 4px; flex-wrap: wrap; }
+.seats i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: block; }
+.summary { display: flex; flex-wrap: wrap; gap: 6px 28px; padding: 14px 16px; background: var(--surface-2); border-left: 2px solid var(--gold); }
+.summary div { display: grid; }
+.summary b { font-family: var(--display); font-size: 1.45rem; font-weight: 600; }
+.demo { font-size: 0.84rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* signed-in area */
+.welcome { background: var(--night-2); color: var(--night-ink); }
+.welcome .wrap { padding-block: 26px; display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.welcome h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 500; }
+.welcome .eyebrow { color: var(--brass); margin-bottom: 6px; }
+.welcome p { color: var(--night-muted); font-size: 0.9rem; }
+main.work { padding-block: 0 64px; }
+.tabs { display: flex; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line); margin-bottom: 28px; scrollbar-width: thin; background: var(--bg); }
+.tabs button { border: none; background: none; padding: 14px 14px; font-weight: 600; font-size: 0.86rem; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); }
+.count { background: var(--gold-soft); color: var(--gold); padding: 0 7px; font-size: 0.74rem; font-variant-numeric: tabular-nums; border-radius: 999px; }
+.section { display: grid; gap: 18px; min-width: 0; }
+.section h2 { font-size: 2rem; }
+.section-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.panel { background: var(--surface); border: 1px solid var(--line); padding: 24px; display: grid; gap: 18px; min-width: 0; }
+.panel h3 { font-size: 1.45rem; }
+.controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.controls .field { min-width: 0; }
+.controls select, .controls input { border: 1px solid var(--line); border-radius: 2px; padding: 9px 11px; background: var(--surface); min-height: 42px; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-weight: 700; padding: 12px 14px; background: var(--surface-2); white-space: nowrap; }
+td { padding: 12px 14px; border-top: 1px solid var(--line); vertical-align: middle; white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.wrap-cell { white-space: normal; min-width: 13rem; }
+td.right, th.right { text-align: right; }
+tr.hl td { background: var(--gold-soft); }
+.no { color: var(--gold); font-family: var(--mono); font-size: 0.82rem; }
+.pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; white-space: nowrap; letter-spacing: 0.02em; }
+.p-info { background: var(--info-soft); color: var(--info); }
+.p-warn { background: var(--warn-soft); color: var(--warn); }
+.p-bad { background: var(--bad-soft); color: var(--bad); }
+.p-ok { background: var(--ok-soft); color: var(--ok); }
+.p-mute { background: var(--surface-2); color: var(--muted); }
+.empty { border: 1px dashed var(--line); padding: 40px 20px; text-align: center; color: var(--muted); display: grid; gap: 6px; justify-items: center; background: var(--surface); }
+.empty b { color: var(--ink); font-family: var(--display); font-size: 1.4rem; font-weight: 600; }
+.cards { display: grid; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: start; }
+.compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .compare { grid-template-columns: minmax(0, 1fr); } }
+.compare > div { background: var(--surface-2); padding: 12px 14px; display: grid; gap: 3px; }
+.compare .changed { color: var(--gold); font-weight: 700; }
+dl.details { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: 10px 18px; margin: 0; }
+dl.details dt { color: var(--muted); font-size: 0.88rem; }
+dl.details dd { margin: 0; font-variant-numeric: tabular-nums; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) { dl.details { grid-template-columns: minmax(0, 1fr); gap: 2px; } dl.details dd { margin-bottom: 8px; } }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 18px; }
+@media (max-width: 860px) { .split { grid-template-columns: minmax(0, 1fr); } }
+.confirm-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.confirm-row span { font-size: 0.86rem; }
+.pay-form { display: flex; gap: 8px; align-items: start; flex-wrap: wrap; }
+.pay-form .field { width: 9rem; }
+.pay-form .field input { min-height: 36px; padding: 6px 9px; }
+.success { border: 1px solid var(--gold); background: var(--surface); padding: 28px; display: grid; gap: 18px; }
+.success h2 { font-size: 2.2rem; }
+.success .big { font-family: var(--mono); font-size: 1.7rem; font-weight: 500; color: var(--accent); }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 20; max-width: min(540px, calc(100% - 32px)); }
+#toast .t { background: var(--night); color: var(--night-ink); padding: 12px 18px; font-size: 0.9rem; box-shadow: 0 10px 30px rgba(0,0,0,.3); border-left: 3px solid var(--brass); }
+#toast .t.bad { border-left-color: var(--bad); }
+.loading { color: var(--muted); font-size: 0.85rem; }
+@media (prefers-reduced-motion: no-preference) { .btn, .seg button, .tabs button { transition: background .15s, border-color .15s, color .15s; } }
+</style>
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* ======================================================================
+   Restaurant rules (same as the Java program: TableType, BookingRules,
+   RescheduleCharge, CancellationCharge)
+   ====================================================================== */
+const TABLES = {
+  REGULAR: { label: 'Regular', seats: 4, price: 500 },
+  FAMILY:  { label: 'Family',  seats: 8, price: 1200 },
+  VIP:     { label: 'VIP',     seats: 6, price: 2500 }
+};
+const TABLE_KEYS = ['REGULAR', 'FAMILY', 'VIP'];
+const OPEN = '10:00', LAST = '21:00', MAX_TABLES = 10;
+const RESCHEDULE_FEE = 200, CANCEL_RATE = 0.20;
+const MAX_GUESTS = Math.max.apply(null, TABLE_KEYS.map(k => TABLES[k].seats)) * MAX_TABLES;
+const STATUS = {
+  CONFIRMED: 'Confirmed', PENDING_UPDATE: 'Pending Update', CANCEL_REQUESTED: 'Cancel Requested',
+  CHECKED_IN: 'Checked-In', CHECKED_OUT: 'Checked-Out', CANCELLED: 'Cancelled'
+};
+const STATUS_PILL = {
+  CONFIRMED: 'p-info', PENDING_UPDATE: 'p-warn', CANCEL_REQUESTED: 'p-warn',
+  CHECKED_IN: 'p-ok', CHECKED_OUT: 'p-mute', CANCELLED: 'p-bad'
+};
+const PAY = { FULLY_PAID: 'Fully Paid', PARTIALLY_PAID: 'Partially Paid', UNPAID: 'Unpaid' };
+const PAY_PILL = { FULLY_PAID: 'p-ok', PARTIALLY_PAID: 'p-warn', UNPAID: 'p-bad' };
+const PAY_ORDER = { FULLY_PAID: 0, PARTIALLY_PAID: 1, UNPAID: 2 };
+/* Default employee accounts (EMPLOYEE.txt in the Java program) */
+const EMPLOYEES = [
+  { username: 'staff', password: 'staff123', name: 'Default Staff', role: 'STAFF' },
+  { username: 'manager', password: 'manager123', name: 'Default Manager', role: 'MANAGER' }
+];
+
+/* ======================================================================
+   Small helpers
+   ====================================================================== */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const peso = n => 'PHP ' + Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const round2 = n => Math.round(n * 100) / 100;
+const clone = o => JSON.parse(JSON.stringify(o));
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const todayStr = () => ymd(new Date());
+const nowHM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+function latestDate() {
+  const t = new Date(); const y = t.getFullYear() + 1, m = t.getMonth();
+  const last = new Date(y, m + 1, 0).getDate();
+  return ymd(new Date(y, m, Math.min(t.getDate(), last)));
+}
+function isRealDate(s) {
+  const p = s.split('-').map(Number); const d = new Date(p[0], p[1] - 1, p[2]);
+  return d.getFullYear() === p[0] && d.getMonth() === p[1] - 1 && d.getDate() === p[2];
+}
+function fmtDate(s) {
+  if (!s) return '';
+  const p = s.split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-PH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+function shortDate(s) {
+  if (!s) return '';
+  const p = s.split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString('en-PH', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function stamp() { const d = new Date(); return ymd(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+const rand6 = () => String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
+const minTables = (guests, type) => Math.ceil(guests / TABLES[type].seats);
+
+/* Money (Reservation.getBaseAmount / getTotalAmount / getBalance / getPaymentStatus) */
+const baseAmount = r => TABLES[r.tableType].price * r.numTables;
+const totalAmount = r => r.status === 'CANCELLED' ? r.extraCharges : baseAmount(r) + r.extraCharges;
+const balance = r => Math.max(0, round2(totalAmount(r) - r.amountPaid));
+const refundDue = r => Math.max(0, round2(r.amountPaid - totalAmount(r)));
+function payStatus(r) {
+  if (r.amountPaid < 0.005) return 'UNPAID';
+  if (balance(r) < 0.005) return 'FULLY_PAID';
+  return 'PARTIALLY_PAID';
+}
+const changesSchedule = (r, ch) => ch.date !== r.date || ch.time !== r.time;
+const sameAs = (r, ch) => !changesSchedule(r, ch) && ch.guests === r.guests && ch.tableType === r.tableType && ch.numTables === r.numTables;
+
+/* Customers */
+const fullName = c => {
+  if (!c) return '(unknown)';
+  const n = c.lastName ? c.firstName + ' ' + c.lastName : c.firstName;
+  return c.dup > 0 ? n + '(' + c.dup + ')' : n;
+};
+const cust = id => S.customers.find(c => c.id === id);
+const custName = id => fullName(cust(id));
+
+/* ======================================================================
+   State
+   ====================================================================== */
+const S = {
+  customers: [], reservations: [], cancelled: [], statuslog: [],
+  loaded: false, mode: 'local', modeNote: '',
+  session: null, view: 'home', homeTab: 'login', tab: null, sub: null,
+  forms: {}, errors: {}, touched: {}, formMsg: {},
+  confirm: null, toast: null, busy: false, pendingBook: null,
+  sort: 'date', filter: 'ALL', query: ''
+};
+
+/* ======================================================================
+   Storage (Singleton-style store with two strategies: shared db or this browser)
+   ====================================================================== */
+const COLLS = ['customers', 'reservations', 'cancelled', 'statuslog'];
+const LS_KEY = 'rrs-data-v1';
+const Store = {
+  db: null,
+  async init() {
+    let db = null;
+    try {
+      if (window.claude && typeof window.claude.use === 'function') db = await window.claude.use('db');
+    } catch (e) { db = null; }
+    if (db) {
+      let canWrite = null;
+      try {
+        const user = await window.claude.use('user');
+        canWrite = user ? await user.can('data.write') : null;
+      } catch (e) { canWrite = null; }
+      if (canWrite === false) {
+        db = null;
+        S.modeNote = 'You can open this page but not save to its shared records, so everything you do here is kept in this browser only.';
+      }
+    } else {
+      S.modeNote = '';
+    }
+    if (!db) { this.loadLocal(); return; }
+    this.db = db; S.mode = 'shared'; S.modeNote = '';
+    const seen = new Set();
+    COLLS.forEach(c => {
+      db.collection(c).onSnapshot(snap => {
+        S[c] = snap.docs.map(d => d.data());
+        seen.add(c);
+        if (seen.size === COLLS.length) S.loaded = true;
+        render();
+      }, err => {
+        toast('Could not load saved ' + c + ' (' + (err && err.code || 'error') + '). Reload the page to try again.', true);
+      });
+    });
+  },
+  loadLocal() {
+    S.mode = 'local';
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) { const d = JSON.parse(raw); COLLS.forEach(c => { if (Array.isArray(d[c])) S[c] = d[c]; }); }
+    } catch (e) { /* storage unavailable: start empty */ }
+    S.loaded = true;
+    render();
+  },
+  persistLocal() {
+    try { const d = {}; COLLS.forEach(c => d[c] = S[c]); localStorage.setItem(LS_KEY, JSON.stringify(d)); } catch (e) { /* ignore */ }
+  },
+  async put(coll, obj) {
+    const list = S[coll].slice(); const i = list.findIndex(x => x.id === obj.id);
+    if (i >= 0) list[i] = obj; else list.push(obj);
+    S[coll] = list;
+    if (this.db) await this.db.collection(coll).doc(obj.id).set(obj); else this.persistLocal();
+  },
+  async remove(coll, id) {
+    S[coll] = S[coll].filter(x => x.id !== id);
+    if (this.db) await this.db.collection(coll).doc(id).delete(); else this.persistLocal();
+  }
+};
+
+/* ======================================================================
+   Validation (same rules as Validator.java). Each check throws
+   InvalidInput with the reason; the form shows it under the field.
+   ====================================================================== */
+class InvalidInput extends Error {}
+const IE = m => new InvalidInput(m);
+const NAME_RE = /^\p{L}+( \p{L}+)*$/u;
+const EMAIL_RE = /^[A-Za-z0-9_%+-]+(\.[A-Za-z0-9_%+-]+)*@([A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+const MOBILE_RE = /^09\d{9}$/;
+const INT_RE = /^(0|[1-9]\d*)$/;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const AMOUNT_RE = /^(0|[1-9]\d*)(\.\d{1,2})?$/;
+
+const V = {
+  personName(field, example, v) {
+    if (v === '') throw IE(field + ' is required.');
+    if (v.length > 30) throw IE(field + ' must be 30 characters or fewer.');
+    if (!NAME_RE.test(v)) throw IE('Use letters only, with one space between words (e.g. ' + example + ').');
+    return v;
+  },
+  email(v) {
+    if (v === '') throw IE('Email address is required.');
+    if (v.length > 100 || !EMAIL_RE.test(v)) throw IE('That is not a valid email address. Use a format like juan@example.com.');
+    return v.toLowerCase();
+  },
+  contact(v) {
+    if (!MOBILE_RE.test(v)) throw IE('Enter 11 digits starting with 09, with no spaces or dashes (e.g. 09171234567).');
+    return v;
+  },
+  int(v, min, max) {
+    if (!INT_RE.test(v) || v.length > 9) throw IE('Enter a whole number from ' + min + ' to ' + max + ' (digits only, no spaces or leading zeros).');
+    const n = Number(v);
+    if (n < min || n > max) throw IE('Enter a number from ' + min + ' to ' + max + '.');
+    return n;
+  },
+  date(v) {
+    if (v === '') throw IE('Choose a reservation date.');
+    if (!DATE_RE.test(v) || !isRealDate(v)) throw IE('Use a real date in the format YYYY-MM-DD (e.g. 2026-12-24).');
+    const t = todayStr(), latest = latestDate();
+    if (v < t) throw IE('That date has already passed. Pick today or a later date.');
+    if (v > latest) throw IE('You can only book up to 1 year ahead (latest date: ' + latest + ').');
+    if (v === t && nowHM() >= LAST) throw IE('Bookings for today are closed (last booking is ' + LAST + '). Pick another date.');
+    return v;
+  },
+  time(v, date) {
+    if (v === '') throw IE('Choose a reservation time.');
+    if (!TIME_RE.test(v)) throw IE('Use 24-hour format HH:mm (e.g. 10:00, 13:30, 18:45).');
+    if (v < OPEN || v > LAST) throw IE('We accept bookings from ' + OPEN + ' to ' + LAST + ' only.');
+    if (date && date === todayStr() && v <= nowHM()) throw IE('That time has already passed today. Pick a later time.');
+    return v;
+  },
+  tableType(v, guests) {
+    if (!TABLES[v]) throw IE('Choose a table type.');
+    const cap = TABLES[v].seats * MAX_TABLES;
+    if (guests != null && guests > cap) throw IE(TABLES[v].label + ' tables can fit at most ' + cap + ' guests (' + MAX_TABLES + ' tables). Pick a bigger table type.');
+    return v;
+  },
+  tables(v, guests, type) {
+    const n = V.int(v, 1, MAX_TABLES);
+    if (guests != null && type) {
+      const min = minTables(guests, type);
+      if (n < min) throw IE(guests + ' guests need at least ' + min + ' ' + TABLES[type].label + ' table(s) (' + TABLES[type].seats + ' seats each).');
+    }
+    return n;
+  },
+  amount(v, bal) {
+    if (!AMOUNT_RE.test(v) || v.length > 12) throw IE('Enter an amount like 500 or 750.50 (digits only, up to 2 decimals).');
+    const a = Number(v);
+    if (a <= 0) throw IE('Amount must be greater than zero.');
+    if (a > bal + 0.005) throw IE('Amount is more than the remaining balance of ' + peso(bal) + '.');
+    return a;
+  }
+};
+
+function tryField(errors, out, key, fn) {
+  try { out[key] = fn(); } catch (e) { if (e instanceof InvalidInput) errors[key] = e.message; else throw e; }
+}
+
+const CHECKS = {
+  register(f) {
+    const e = {}, o = {};
+    tryField(e, o, 'first', () => V.personName('First name', 'Juan or Maria Clara', f.first || ''));
+    tryField(e, o, 'last', () => V.personName('Last name', 'Santos or Dela Cruz', f.last || ''));
+    tryField(e, o, 'contact', () => {
+      const c = V.contact(f.contact || '');
+      if (S.customers.some(x => x.contact === c)) throw IE('That contact number is already registered. Use a different one.');
+      return c;
+    });
+    tryField(e, o, 'email', () => {
+      const m = V.email(f.email || '');
+      if (S.customers.some(x => x.email === m)) throw IE('That email address is already registered. Use a different one.');
+      return m;
+    });
+    return { errors: e, values: o };
+  },
+  loginCustomer(f) {
+    const e = {}, o = {};
+    tryField(e, o, 'email', () => {
+      const m = V.email(f.email || '');
+      const c = S.customers.find(x => x.email === m);
+      if (!c) throw IE('No account is registered with ' + m + '. Check the spelling, or register first.');
+      return c;
+    });
+    return { errors: e, values: o };
+  },
+  loginStaff(f) {
+    const e = {}, o = {};
+    tryField(e, o, 'username', () => {
+      const u = f.username || '';
+      if (u === '' || u.indexOf(' ') >= 0) throw IE('Enter your username (no spaces).');
+      return u;
+    });
+    tryField(e, o, 'password', () => {
+      const p = f.password || '';
+      if (p === '') throw IE('Enter your password.');
+      return p;
+    });
+    if (!e.username && !e.password) {
+      const emp = EMPLOYEES.find(x => x.username === o.username && x.password === o.password);
+      if (!emp) e.password = 'Invalid username or password. Try again.';
+      else o.employee = emp;
+    }
+    return { errors: e, values: o };
+  },
+  booking(f) {
+    const e = {}, o = {};
+    tryField(e, o, 'date', () => V.date(f.date || ''));
+    tryField(e, o, 'time', () => V.time(f.time || '', o.date));
+    tryField(e, o, 'guests', () => V.int(f.guests || '', 1, MAX_GUESTS));
+    tryField(e, o, 'type', () => V.tableType(f.type || '', o.guests));
+    tryField(e, o, 'tables', () => V.tables(f.tables || '', o.guests, o.type));
+    return { errors: e, values: o };
+  }
+};
+CHECKS.book = CHECKS.booking;
+CHECKS.update = CHECKS.booking;
+/* The hotel-style booking bar on the home page: date, time and guests only */
+CHECKS.hero = function (f) {
+  const e = {}, o = {};
+  tryField(e, o, 'date', () => V.date(f.date || ''));
+  tryField(e, o, 'time', () => V.time(f.time || '', o.date));
+  tryField(e, o, 'guests', () => V.int(f.guests || '', 1, MAX_GUESTS));
+  return { errors: e, values: o };
+};
+
+const FIELD_ORDER = {
+  register: ['first', 'last', 'contact', 'email'],
+  hero: ['date', 'time', 'guests'],
+  loginCustomer: ['email'],
+  loginStaff: ['username', 'password'],
+  book: ['date', 'time', 'guests', 'type', 'tables'],
+  update: ['date', 'time', 'guests', 'type', 'tables']
+};
+
+function fv(form) { return S.forms[form] || (S.forms[form] = {}); }
+function resetForm(form, init) {
+  S.forms[form] = Object.assign({}, init || {});
+  S.errors[form] = {}; S.touched[form] = {}; S.formMsg[form] = '';
+}
+function checkFor(form) {
+  if (form.indexOf('pay-') === 0) {
+    const r = S.reservations.find(x => x.id === form.slice(4));
+    const e = {}, o = {};
+    tryField(e, o, 'amount', () => V.amount(fv(form).amount || '', r ? balance(r) : 0));
+    return { errors: e, values: o };
+  }
+  return CHECKS[form](fv(form));
+}
+/* all=true on submit: show every error. Otherwise only for fields already visited. */
+function runCheck(form, all) {
+  const res = checkFor(form);
+  const t = S.touched[form] || (S.touched[form] = {});
+  if (all) (FIELD_ORDER[form] || Object.keys(res.errors)).concat(Object.keys(res.errors)).forEach(k => t[k] = true);
+  const shown = {};
+  Object.keys(res.errors).forEach(k => { if (t[k]) shown[k] = res.errors[k]; });
+  S.errors[form] = shown;
+  res.ok = Object.keys(res.errors).length === 0;
+  return res;
+}
+
+/* ======================================================================
+   Actions (same business rules as ReservationService / Reservation.java)
+   ====================================================================== */
+function requireRole() {
+  const roles = Array.prototype.slice.call(arguments);
+  if (!S.session || roles.indexOf(S.session.role) < 0) throw new Error('This action is not available to your account.');
+}
+function getRes(id) {
+  const r = S.reservations.find(x => x.id === id);
+  if (!r) throw new Error('Reservation ' + id + ' no longer exists. It may have been changed by someone else.');
+  return clone(r);
+}
+function requireStatus(r, expected, action) {
+  if (r.status !== expected) throw new Error('Cannot ' + action + ': reservation ' + r.id + ' is ' + STATUS[r.status] + ' (it must be ' + STATUS[expected] + ').');
+}
+async function logStatus(r) {
+  const entry = { id: 'L' + Date.now() + rand6(), ts: stamp(), reservationId: r.id, customerId: r.customerId, customerName: custName(r.customerId), status: STATUS[r.status] };
+  await Store.put('statuslog', entry);
+}
+function nextDup(first, last) {
+  const used = new Set(S.customers
+    .filter(c => c.firstName.toLowerCase() === first.toLowerCase() && (c.lastName || '').toLowerCase() === last.toLowerCase())
+    .map(c => c.dup || 0));
+  let n = 0; while (used.has(n)) n++;
+  return n;
+}
+
+const Actions = {
+  async register(v) {
+    const ids = new Set(S.customers.map(c => c.id));
+    let id; do { id = new Date().getFullYear() + '-' + rand6(); } while (ids.has(id));
+    const c = { id, firstName: v.first, lastName: v.last, dup: nextDup(v.first, v.last), contact: v.contact, email: v.email, createdAt: Date.now() };
+    await Store.put('customers', c);
+    return c;
+  },
+  async makeReservation(v) {
+    requireRole('CUSTOMER');
+    const ids = new Set(S.reservations.concat(S.cancelled).map(r => r.id));
+    let id; do { id = 'RN-' + rand6(); } while (ids.has(id));
+    const r = { id, customerId: S.session.id, date: v.date, time: v.time, guests: v.guests, tableType: v.type, numTables: v.tables,
+      status: 'CONFIRMED', amountPaid: 0, extraCharges: 0, pending: null, createdAt: Date.now() };
+    await Store.put('reservations', r);
+    return r;
+  },
+  async requestUpdate(id, ch) {
+    requireRole('CUSTOMER');
+    const r = getRes(id);
+    if (r.customerId !== S.session.id) throw new Error('No reservation found with ID: ' + id);
+    requireStatus(r, 'CONFIRMED', 'request an update');
+    r.pending = ch; r.status = 'PENDING_UPDATE';
+    await Store.put('reservations', r);
+  },
+  async requestCancel(id) {
+    requireRole('CUSTOMER');
+    const r = getRes(id);
+    if (r.customerId !== S.session.id) throw new Error('No reservation found with ID: ' + id);
+    if (r.status !== 'CONFIRMED' && r.status !== 'PENDING_UPDATE') throw new Error('Cannot request a cancellation: reservation ' + id + ' is ' + STATUS[r.status] + '.');
+    r.pending = null; r.status = 'CANCEL_REQUESTED';
+    await Store.put('reservations', r);
+  },
+  async approveUpdate(id) {
+    requireRole('STAFF');
+    const r = getRes(id);
+    requireStatus(r, 'PENDING_UPDATE', 'approve an update');
+    const p = r.pending;
+    const chk = CHECKS.booking({ date: p.date, time: p.time, guests: String(p.guests), type: p.tableType, tables: String(p.numTables) });
+    const firstErr = FIELD_ORDER.book.map(k => chk.errors[k]).filter(Boolean)[0];
+    if (firstErr) throw new Error('Cannot approve this update: ' + firstErr + ' Reject it so the customer can request again.');
+    const fee = changesSchedule(r, p) ? RESCHEDULE_FEE : 0;
+    r.date = p.date; r.time = p.time; r.guests = p.guests; r.tableType = p.tableType; r.numTables = p.numTables;
+    r.pending = null; r.status = 'CONFIRMED'; r.extraCharges = round2(r.extraCharges + fee);
+    await Store.put('reservations', r);
+    return fee;
+  },
+  async rejectUpdate(id) {
+    requireRole('STAFF');
+    const r = getRes(id);
+    requireStatus(r, 'PENDING_UPDATE', 'reject an update');
+    r.pending = null; r.status = 'CONFIRMED';
+    await Store.put('reservations', r);
+  },
+  async checkIn(id) {
+    requireRole('STAFF');
+    const r = getRes(id);
+    requireStatus(r, 'CONFIRMED', 'check in');
+    r.status = 'CHECKED_IN';
+    await Store.put('reservations', r);
+    await logStatus(r);
+  },
+  async checkOut(id) {
+    requireRole('STAFF');
+    const r = getRes(id);
+    requireStatus(r, 'CHECKED_IN', 'check out');
+    if (balance(r) >= 0.005) throw new Error('Cannot check out ' + id + ': the customer still owes ' + peso(balance(r)) + '. Record the payment first.');
+    r.status = 'CHECKED_OUT';
+    await Store.put('reservations', r);
+    await logStatus(r);
+  },
+  async recordPayment(id, amount) {
+    requireRole('STAFF');
+    const r = getRes(id);
+    if (r.status === 'CANCELLED') throw new Error('Cannot record a payment: reservation ' + id + ' is cancelled.');
+    if (balance(r) < 0.005) throw new Error('Reservation ' + id + ' is already fully paid.');
+    if (amount <= 0 || amount > balance(r) + 0.005) throw new Error('Amount is more than the remaining balance of ' + peso(balance(r)) + '.');
+    r.amountPaid = round2(r.amountPaid + amount);
+    await Store.put('reservations', r);
+    return r;
+  },
+  async approveCancel(id) {
+    requireRole('MANAGER');
+    const r = getRes(id);
+    requireStatus(r, 'CANCEL_REQUESTED', 'approve a cancellation');
+    const fee = round2(baseAmount(r) * CANCEL_RATE);
+    r.status = 'CANCELLED'; r.extraCharges = round2(r.extraCharges + fee);
+    await Store.put('cancelled', r);
+    await Store.remove('reservations', r.id);
+    return fee;
+  },
+  async rejectCancel(id) {
+    requireRole('MANAGER');
+    const r = getRes(id);
+    requireStatus(r, 'CANCEL_REQUESTED', 'reject a cancellation');
+    r.status = 'CONFIRMED';
+    await Store.put('reservations', r);
+  }
+};
+
+async function run(fn, okMsg) {
+  if (S.busy) return;
+  S.busy = true; render();
+  try {
+    const result = await fn();
+    if (okMsg) toast(typeof okMsg === 'function' ? okMsg(result) : okMsg);
+    return result;
+  } catch (e) {
+    toast(e && e.message ? e.message : 'Something went wrong. Try again.', true);
+    throw e;
+  } finally {
+    S.busy = false; S.confirm = null; render();
+  }
+}
+
+/* ======================================================================
+   Session
+   ====================================================================== */
+const DEFAULT_TAB = { CUSTOMER: 'book', STAFF: 'reservations', MANAGER: 'reservations' };
+function saveSession() {
+  try { sessionStorage.setItem('rrs-session', JSON.stringify({ session: S.session, tab: S.tab })); } catch (e) { /* ignore */ }
+}
+function loadSession() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem('rrs-session') || 'null');
+    if (d && d.session) { S.session = d.session; S.tab = d.tab || DEFAULT_TAB[d.session.role]; S.view = 'app'; }
+  } catch (e) { /* ignore */ }
+}
+function signIn(session) {
+  S.session = session; S.view = 'app'; S.tab = DEFAULT_TAB[session.role]; S.sub = null; S.confirm = null;
+  S.sort = 'date'; S.filter = 'ALL'; S.query = '';
+  resetForm('book', session.role === 'CUSTOMER' && S.pendingBook ? S.pendingBook : null);
+  if (session.role === 'CUSTOMER') S.pendingBook = null;
+  saveSession();
+}
+function signOut() {
+  S.session = null; S.view = 'home'; S.homeTab = 'login'; S.sub = null; S.confirm = null; S.tab = null; S.pendingBook = null;
+  resetForm('loginCustomer'); resetForm('loginStaff'); resetForm('register');
+  saveSession();
+  toast('You have been logged out.');
+}
+
+/* ======================================================================
+   Rendering helpers
+   ====================================================================== */
+const pill = (cls, text) => '<span class="pill ' + cls + '">' + esc(text) + '</span>';
+const statusPill = r => pill(STATUS_PILL[r.status], STATUS[r.status]);
+const payPill = r => pill(PAY_PILL[payStatus(r)], PAY[payStatus(r)]);
+const seatDots = n => '<span class="seats" aria-hidden="true">' + '<i></i>'.repeat(n) + '</span>';
+
+function field(form, key, label, opts) {
+  opts = opts || {};
+  const id = form + '-' + key;
+  const val = fv(form)[key] == null ? '' : fv(form)[key];
+  const err = (S.errors[form] || {})[key];
+  const attrs = [
+    'id="' + id + '"', 'name="' + key + '"', 'type="' + (opts.type || 'text') + '"',
+    'data-f="' + form + '"', 'data-k="' + key + '"', 'value="' + esc(val) + '"', 'autocomplete="off"', 'spellcheck="false"'
+  ];
+  if (opts.inputmode) attrs.push('inputmode="' + opts.inputmode + '"');
+  if (opts.attrs) attrs.push(opts.attrs);
+  if (err) attrs.push('aria-invalid="true" aria-describedby="' + id + '-err"');
+  return '<div class="field' + (err ? ' has-err' : '') + '">' +
+    '<label for="' + id + '">' + esc(label) + '</label>' +
+    '<input ' + attrs.join(' ') + '>' +
+    (opts.hint ? '<p class="hint"' + (err ? ' hidden' : '') + '>' + opts.hint + '</p>' : '') +
+    (err ? '<p class="err" id="' + id + '-err">' + esc(err) + '</p>' : '') +
+    '</div>';
+}
+function formMsg(form) {
+  const m = S.formMsg[form];
+  return m ? '<div class="form-err" role="alert">' + esc(m) + '</div>' : '';
+}
+function emptyState(title, text) {
+  return '<div class="empty"><b>' + esc(title) + '</b>' + (text ? '<span>' + esc(text) + '</span>' : '') + '</div>';
+}
+function tableTypeText(r) {
+  return r.numTables + ' × ' + TABLES[r.tableType].label + ' (seats ' + (TABLES[r.tableType].seats * r.numTables) + ')';
+}
+
+function detailsHTML(r) {
+  const c = cust(r.customerId);
+  const cancelled = r.status === 'CANCELLED';
+  let h = '<dl class="details">' +
+    '<dt>Reservation ID</dt><dd class="mono">' + esc(r.id) + '</dd>' +
+    '<dt>Customer</dt><dd>' + esc(fullName(c)) + ' <span class="muted mono">(' + esc(r.customerId) + ')</span></dd>' +
+    (c ? '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' : '') +
+    '<dt>Date and time</dt><dd>' + esc(fmtDate(r.date)) + ' at ' + esc(r.time) + '</dd>' +
+    '<dt>Guests</dt><dd>' + r.guests + '</dd>' +
+    '<dt>Tables</dt><dd>' + esc(tableTypeText(r)) + '</dd>' +
+    '<dt>Status</dt><dd>' + statusPill(r) + '</dd>' +
+    '<dt>Table cost</dt><dd>' + peso(baseAmount(r)) + (cancelled ? ' <span class="muted">(waived, cancelled)</span>' : '') + '</dd>' +
+    '<dt>Extra charges</dt><dd>' + peso(r.extraCharges) + '</dd>' +
+    '<dt>Total amount</dt><dd><b>' + peso(totalAmount(r)) + '</b></dd>' +
+    '<dt>Amount paid</dt><dd>' + peso(r.amountPaid) + '</dd>' +
+    '<dt>Balance</dt><dd><b>' + peso(balance(r)) + '</b></dd>' +
+    (refundDue(r) > 0.005 ? '<dt>Refund due</dt><dd>' + peso(refundDue(r)) + '</dd>' : '') +
+    '<dt>Payment status</dt><dd>' + payPill(r) + '</dd>' +
+    '</dl>';
+  if (r.pending) h += pendingHTML(r);
+  return h;
+}
+function pendingHTML(r) {
+  const p = r.pending;
+  const mark = (a, b) => a !== b ? ' class="changed"' : '';
+  return '<div class="compare" aria-label="Requested update">' +
+    '<div><span class="label">Current</span>' +
+      '<span>' + esc(fmtDate(r.date)) + ' at ' + esc(r.time) + '</span>' +
+      '<span>' + r.guests + ' guests</span>' +
+      '<span>' + esc(tableTypeText(r)) + '</span></div>' +
+    '<div><span class="label">Requested (waiting for staff approval)</span>' +
+      '<span' + mark(p.date + p.time, r.date + r.time) + '>' + esc(fmtDate(p.date)) + ' at ' + esc(p.time) + '</span>' +
+      '<span' + mark(p.guests, r.guests) + '>' + p.guests + ' guests</span>' +
+      '<span' + mark(p.tableType + p.numTables, r.tableType + r.numTables) + '>' + esc(tableTypeText(p)) + '</span>' +
+      '<span class="muted">' + (changesSchedule(r, p) ? 'Reschedule fee of ' + peso(RESCHEDULE_FEE) + ' applies once approved' : 'No extra charge') + '</span>' +
+    '</div></div>';
+}
+
+/* Booking form (new reservation and update) */
+function bookingForm(form, current) {
+  const f = fv(form);
+  const errs = S.errors[form] || {};
+  let guests = null;
+  try { guests = V.int(f.guests || '', 1, MAX_GUESTS); } catch (e) { guests = null; }
+  const typeOpts = TABLE_KEYS.map((k, i) => {
+    const t = TABLES[k];
+    const need = guests != null ? minTables(guests, k) : null;
+    const fits = need == null || need <= MAX_TABLES;
+    return '<label class="type-opt">' +
+      '<input type="radio" name="' + form + '-type" id="' + form + '-type-' + k + '" data-f="' + form + '" data-k="type" value="' + k + '"' + (f.type === k ? ' checked' : '') + '>' +
+      '<span class="box"><span class="tname">' + esc(t.label) + '</span>' + seatDots(t.seats) +
+      '<span>' + t.seats + ' seats per table</span><span class="num">' + peso(t.price) + ' per table</span>' +
+      (need == null ? '<span class="need">Enter guests to see how many you need</span>' :
+        '<span class="need' + (fits ? '' : ' no') + '">' + (fits ? 'You need ' + need + ' table' + (need > 1 ? 's' : '') : 'Too small for ' + guests + ' guests') + '</span>') +
+      '</span></label>';
+  }).join('');
+  let tablesHint = '1 to ' + MAX_TABLES + ' tables.';
+  if (guests != null && TABLES[f.type]) tablesHint = 'At least ' + minTables(guests, f.type) + ', at most ' + MAX_TABLES + '.';
+  const chk = CHECKS.booking(f);
+  const ready = Object.keys(chk.errors).length === 0;
+  let summary = '';
+  if (ready) {
+    const v = chk.values;
+    const cost = TABLES[v.type].price * v.tables;
+    const fee = current && (v.date !== current.date || v.time !== current.time) ? RESCHEDULE_FEE : 0;
+    summary = '<div class="summary">' +
+      '<div><span class="label">Table cost</span><b class="num">' + peso(cost) + '</b></div>' +
+      (current ? '<div><span class="label">Reschedule fee</span><b class="num">' + peso(fee) + '</b></div>' : '') +
+      '<div><span class="label">Seats</span><b class="num">' + (TABLES[v.type].seats * v.tables) + ' for ' + v.guests + '</b></div>' +
+      '</div>';
+  }
+  return '<form data-form="' + form + '" novalidate>' +
+    '<p class="hint">Bookings from ' + OPEN + ' to ' + LAST + ', from today up to ' + esc(latestDate()) + '.' + (current ? ' The current values are filled in; change only what you need.' : '') + '</p>' +
+    '<div class="grid2">' +
+      field(form, 'date', 'Reservation date', { type: 'date', attrs: 'min="' + todayStr() + '" max="' + latestDate() + '"', hint: 'Today up to ' + esc(shortDate(latestDate())) + '.' }) +
+      field(form, 'time', 'Reservation time', { type: 'time', attrs: 'min="' + OPEN + '" max="' + LAST + '" step="60"', hint: 'Between ' + OPEN + ' and ' + LAST + ' (10 AM to 9 PM).' }) +
+    '</div>' +
+    '<div class="grid2">' +
+      field(form, 'guests', 'Number of guests', { inputmode: 'numeric', hint: '1 to ' + MAX_GUESTS + '.' }) +
+      field(form, 'tables', 'Number of tables', { inputmode: 'numeric', hint: tablesHint }) +
+    '</div>' +
+    '<div class="field' + (errs.type ? ' has-err' : '') + '" role="radiogroup" aria-labelledby="' + form + '-type-label">' +
+      '<span class="flabel" id="' + form + '-type-label">Table type</span>' +
+      '<div class="types">' + typeOpts + '</div>' +
+      (errs.type ? '<p class="err">' + esc(errs.type) + '</p>' : '') +
+    '</div>' +
+    summary + formMsg(form) +
+    '<div class="actions">' +
+      '<button class="btn primary" type="submit"' + (S.busy || !S.loaded ? ' disabled' : '') + '>' + (current ? 'Send update request' : 'Book table') + '</button>' +
+      (current ? '<button class="btn" type="button" data-action="back">Back</button>' : '') +
+    '</div>' +
+  '</form>';
+}
+
+/* ======================================================================
+   Views
+   ====================================================================== */
+function roleLabel(role) { return { CUSTOMER: 'Customer', STAFF: 'Staff', MANAGER: 'Manager' }[role]; }
+function sessionName() {
+  const s = S.session;
+  if (!s) return '';
+  return s.role === 'CUSTOMER' ? custName(s.id) : s.name;
+}
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+}
+
+function topBar() {
+  const s = S.session;
+  let nav = '';
+  if (S.view === 'home') {
+    nav += '<button class="navlink opt" data-action="scroll" data-v="tables">Our tables</button>' +
+      '<button class="navlink opt" data-action="scroll" data-v="good-to-know">Good to know</button>';
+  }
+  if (s) {
+    nav += '<span class="who">' + esc(roleLabel(s.role)) + ' · <b>' + esc(sessionName()) + '</b></span>';
+    if (S.view !== 'app') nav += '<button class="btn small ghost-light" data-action="open-app">' + (s.role === 'CUSTOMER' ? 'My bookings' : 'Front desk') + '</button>';
+    nav += '<button class="btn small ghost-light" data-action="logout">Log out</button>';
+  } else {
+    if (S.view !== 'account') nav += '<button class="navlink" data-action="open-account" data-v="login">Sign in</button>';
+    nav += '<button class="btn small gold" data-action="start-booking">Book a table</button>';
+  }
+  return '<header class="bar"><div class="wrap">' +
+    '<button class="brand" data-action="go-home" aria-label="Restaurant Reservation System home">' +
+      '<span class="monogram" aria-hidden="true">RR</span>' +
+      '<span><span class="brand-name">Restaurant Reservation</span><span class="brand-sub" style="display:block">Reservation system · ' + OPEN + '–' + LAST + '</span></span>' +
+    '</button>' +
+    '<nav class="nav" aria-label="Site">' + nav + '</nav>' +
+  '</div></header>' +
+  (S.mode === 'local' && S.modeNote && S.loaded ? '<div class="notice"><div class="wrap">' + esc(S.modeNote) + '</div></div>' : '');
+}
+
+function heroArt() {
+  const arch = x => '<path d="M' + x + ' 300V128a52 52 0 0 1 104 0V300Z" fill="url(#rr-sky)" stroke="#c9a66b" stroke-width="1.4"/>' +
+    '<path d="M' + (x + 52) + ' 76V300M' + x + ' 206H' + (x + 104) + '" stroke="#c9a66b" stroke-opacity=".55" stroke-width="1"/>';
+  const stars = [[40, 140], [72, 118], [190, 112], [228, 150], [338, 128], [372, 160], [58, 182], [356, 104]]
+    .map(p => '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="1.3" fill="#f2eee5" opacity=".75"/>').join('');
+  const candle = x => '<circle cx="' + x + '" cy="248" r="30" fill="url(#rr-glow)"/>' +
+    '<rect x="' + (x - 3) + '" y="250" width="6" height="18" fill="#f2eee5"/>' +
+    '<path d="M' + x + ' 240c3 4 3 7 0 10c-3-3-3-6 0-10Z" fill="#f3cf86"/>';
+  return '<svg class="hero-art" viewBox="0 0 420 340" aria-hidden="true">' +
+    '<defs><linearGradient id="rr-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e4a50"/><stop offset="1" stop-color="#0a1d20"/></linearGradient>' +
+    '<radialGradient id="rr-glow"><stop offset="0" stop-color="#f3cf86" stop-opacity=".75"/><stop offset="1" stop-color="#f3cf86" stop-opacity="0"/></radialGradient></defs>' +
+    arch(14) + arch(158) + arch(302) + stars +
+    '<path d="M0 300H420" stroke="#c9a66b" stroke-opacity=".5"/>' +
+    '<rect x="60" y="268" width="300" height="7" fill="#c9a66b"/>' +
+    '<path d="M84 275V306M336 275V306" stroke="#c9a66b" stroke-width="3"/>' +
+    candle(150) + candle(210) + candle(270) +
+    '<circle cx="110" cy="264" r="6" fill="none" stroke="#f2eee5" stroke-opacity=".7"/><circle cx="310" cy="264" r="6" fill="none" stroke="#f2eee5" stroke-opacity=".7"/>' +
+  '</svg>';
+}
+
+/* Top-down drawing of each table type with its real number of seats */
+function tableArt(key) {
+  const t = TABLES[key];
+  let s = '<svg viewBox="0 0 260 160" role="img" aria-label="' + esc(t.label) + ' table with ' + t.seats + ' seats">';
+  const chair = (x, y) => '<circle class="ta-chair" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="9"/>';
+  const plate = (x, y) => '<circle class="ta-plate" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="6"/>';
+  if (key === 'FAMILY') {
+    s += '<rect class="ta-table" x="58" y="56" width="144" height="48" rx="4"/>';
+    [88, 130, 172].forEach(x => { s += chair(x, 38) + chair(x, 122) + plate(x, 66) + plate(x, 94); });
+    s += chair(40, 80) + chair(220, 80) + plate(68, 80) + plate(192, 80);
+    s += '<circle class="ta-candle" cx="130" cy="80" r="4"/>';
+  } else {
+    const r = key === 'VIP' ? 38 : 32;
+    s += '<circle class="ta-table" cx="130" cy="80" r="' + r + '"/>';
+    for (let i = 0; i < t.seats; i++) {
+      const a = (Math.PI * 2 * i) / t.seats - Math.PI / 2;
+      s += chair(130 + Math.cos(a) * (r + 18), 80 + Math.sin(a) * (r + 18)) + plate(130 + Math.cos(a) * (r - 12), 80 + Math.sin(a) * (r - 12));
+    }
+    s += '<circle class="ta-candle" cx="130" cy="80" r="4"/>';
+    if (key === 'VIP') s += '<circle cx="130" cy="80" r="' + (r + 34) + '" fill="none" stroke="var(--gold)" stroke-dasharray="2 5" stroke-opacity=".7"/>';
+  }
+  return s + '</svg>';
+}
+
+const TABLE_COPY = {
+  REGULAR: 'A round table for small groups and dinners for two.',
+  FAMILY: 'A long table for families and celebrations.',
+  VIP: 'A larger round table in a quieter part of the room.'
+};
+
+function homeView() {
+  const f = fv('hero');
+  const rooms = TABLE_KEYS.map(k => {
+    const t = TABLES[k];
+    return '<article class="room">' +
+      '<div class="room-art">' + tableArt(k) + '</div>' +
+      '<div class="room-body">' +
+        '<h3>' + esc(t.label) + '</h3>' +
+        '<p class="muted">' + esc(TABLE_COPY[k]) + '</p>' +
+        '<div class="room-facts"><span>' + t.seats + ' seats per table</span><span>Up to ' + (t.seats * MAX_TABLES) + ' guests</span></div>' +
+        '<div class="room-price"><span><b class="num">' + peso(t.price) + '</b> <small>per table</small></span>' +
+          '<button class="btn primary small" data-action="book-type" data-v="' + k + '">Book ' + esc(t.label) + '</button></div>' +
+      '</div></article>';
+  }).join('');
+  const policies = [
+    ['Booking hours', 'We take reservations from ' + OPEN + ' to ' + LAST + ', from today up to one year ahead (' + shortDate(latestDate()) + ').'],
+    ['Changing a booking', 'Send a change from My bookings. Staff approve it, and moving the date or time adds a ' + peso(RESCHEDULE_FEE) + ' fee.'],
+    ['Cancellations', 'The manager approves cancellations. A fee of ' + Math.round(CANCEL_RATE * 100) + '% of the table cost applies.'],
+    ['Paying', 'Settle the bill at the counter. Staff record each payment, and you can see your balance any time.']
+  ].map(p => '<div class="policy"><h3>' + esc(p[0]) + '</h3><p>' + esc(p[1]) + '</p></div>').join('');
+
+  return '<section class="hero"><div class="wrap hero-grid">' +
+      '<div class="hero-copy">' +
+        '<span class="eyebrow">Reservations open daily · ' + OPEN + ' – ' + LAST + '</span>' +
+        '<h1>An evening <em>worth</em> reserving.</h1>' +
+        '<p class="hero-lede">Choose your date, your time and your table. Change it when plans move, and settle the bill at the counter when you leave.</p>' +
+      '</div>' + heroArt() +
+    '</div>' +
+    '<div class="wrap">' +
+      '<form class="booking-bar" data-form="hero" novalidate aria-label="Find a table">' +
+        field('hero', 'date', 'Date', { type: 'date', attrs: 'min="' + todayStr() + '" max="' + latestDate() + '"' }) +
+        field('hero', 'time', 'Time', { type: 'time', attrs: 'min="' + OPEN + '" max="' + LAST + '" step="60"' }) +
+        field('hero', 'guests', 'Guests', { inputmode: 'numeric', attrs: 'placeholder="1 to ' + MAX_GUESTS + '"' }) +
+        '<div class="go"><button class="btn gold" type="submit">Find a table</button></div>' +
+      '</form>' +
+    '</div></section>' +
+    '<main class="home-main">' +
+      '<section class="block" id="tables"><div class="wrap">' +
+        '<div class="block-head"><span class="eyebrow">Our tables</span><h2>Three ways to sit down together</h2>' +
+        '<p>Every table type seats a set number of guests. Book as many tables as your group needs, up to ' + MAX_TABLES + '.</p></div>' +
+        '<div class="rooms">' + rooms + '</div>' +
+      '</div></section>' +
+      '<section class="block policies-band" id="good-to-know"><div class="wrap">' +
+        '<div class="block-head"><span class="eyebrow">Good to know</span><h2>Before you book</h2></div>' +
+        '<div class="policies">' + policies + '</div>' +
+      '</div></section>' +
+    '</main>' + footer();
+}
+
+function footer() {
+  return '<footer class="footer"><div class="wrap">' +
+    '<div><div class="brand-name">Restaurant Reservation</div><div>Reservations ' + OPEN + ' – ' + LAST + ' · Book up to one year ahead</div></div>' +
+    '<div class="actions">' +
+      (S.session ? '' : '<button class="btn link" data-action="open-account" data-v="staff">Staff &amp; manager sign in</button>') +
+    '</div>' +
+  '</div></footer>';
+}
+
+function accountView() {
+  const tabs = [['login', 'Sign in'], ['register', 'Create account'], ['staff', 'Staff & manager']];
+  const p = S.pendingBook;
+  let side;
+  if (p && S.homeTab !== 'staff') {
+    side = '<span class="eyebrow">Almost there</span><h1>Sign in to finish your booking</h1>' +
+      '<p>We kept the details you chose. After you sign in, they are filled in for you.</p>' +
+      '<div class="pending">' +
+        (p.date ? '<span><span class="label">Date</span><br>' + esc(fmtDate(p.date)) + '</span>' : '') +
+        (p.time ? '<span><span class="label">Time</span><br>' + esc(p.time) + '</span>' : '') +
+        (p.guests ? '<span><span class="label">Guests</span><br>' + esc(p.guests) + '</span>' : '') +
+        (p.type ? '<span><span class="label">Table</span><br>' + esc(TABLES[p.type].label) + '</span>' : '') +
+      '</div>';
+  } else if (S.homeTab === 'staff') {
+    side = '<span class="eyebrow">Front desk</span><h1>Staff and manager sign in</h1>' +
+      '<p>Staff approve changes, check guests in and out, and record payments. The manager approves cancellations and keeps the records.</p>';
+  } else if (S.homeTab === 'register') {
+    side = '<span class="eyebrow">New guest</span><h1>Create your account</h1>' +
+      '<p>You will get a Customer ID, and you sign in with your email address from then on.</p>';
+  } else {
+    side = '<span class="eyebrow">Welcome back</span><h1>Sign in to your bookings</h1>' +
+      '<p>Use the email address you registered with.</p>';
+  }
+  let body;
+  if (S.homeTab === 'register') {
+    body = '<form data-form="register" novalidate>' +
+      '<div class="grid2">' +
+        field('register', 'first', 'First name', { hint: 'Letters only.' }) +
+        field('register', 'last', 'Last name', { hint: 'Letters only, e.g. Dela Cruz.' }) +
+      '</div>' +
+      field('register', 'contact', 'Contact number', { inputmode: 'numeric', hint: '11 digits starting with 09, e.g. 09171234567.' }) +
+      field('register', 'email', 'Email address', { type: 'email', inputmode: 'email', hint: 'You will use this to sign in.' }) +
+      formMsg('register') +
+      '<div class="actions"><button class="btn primary" type="submit"' + (S.loaded && !S.busy ? '' : ' disabled') + '>Create account</button>' +
+      '<button class="btn link" type="button" data-action="home-tab" data-v="login">I already have an account</button></div>' +
+    '</form>';
+  } else if (S.homeTab === 'staff') {
+    body = '<form data-form="loginStaff" novalidate>' +
+      field('loginStaff', 'username', 'Username') +
+      field('loginStaff', 'password', 'Password', { type: 'password' }) +
+      formMsg('loginStaff') +
+      '<div class="actions"><button class="btn primary" type="submit"' + (S.loaded ? '' : ' disabled') + '>Sign in</button></div>' +
+      '<p class="demo">Demo accounts: staff <span class="mono">staff / staff123</span> · manager <span class="mono">manager / manager123</span></p>' +
+    '</form>';
+  } else {
+    body = '<form data-form="loginCustomer" novalidate>' +
+      field('loginCustomer', 'email', 'Email address', { type: 'email', inputmode: 'email' }) +
+      formMsg('loginCustomer') +
+      '<div class="actions"><button class="btn primary" type="submit"' + (S.loaded ? '' : ' disabled') + '>Sign in</button>' +
+      '<button class="btn link" type="button" data-action="home-tab" data-v="register">Create an account</button></div>' +
+    '</form>';
+  }
+  return '<main class="wrap"><div class="account">' +
+    '<aside class="account-side">' + side + '</aside>' +
+    '<section class="account-main">' +
+      '<div class="seg" role="tablist">' + tabs.map(t => '<button role="tab" data-action="home-tab" data-v="' + t[0] + '" aria-selected="' + (S.homeTab === t[0]) + '">' + t[1] + '</button>').join('') + '</div>' +
+      body +
+      '<p class="hint">Tip: press <span class="mono">\\</span> in any field to go back to the previous field.</p>' +
+      (S.loaded ? '' : '<p class="loading">Loading saved records…</p>') +
+    '</section>' +
+  '</div></main>' + footer();
+}
+
+/* ---------- tabs per role ---------- */
+function tabsFor(role) {
+  const R = S.reservations;
+  if (role === 'CUSTOMER') {
+    const mine = R.filter(r => r.customerId === S.session.id).length + S.cancelled.filter(r => r.customerId === S.session.id).length;
+    return [['book', 'Make a reservation'], ['mine', 'My reservations', mine], ['payments', 'Payment status'], ['profile', 'My profile']];
+  }
+  if (role === 'STAFF') {
+    return [
+      ['reservations', 'Reservations', R.length], ['customers', 'Customers'],
+      ['updates', 'Update requests', R.filter(r => r.status === 'PENDING_UPDATE').length],
+      ['checkin', 'Check in', R.filter(r => r.status === 'CONFIRMED').length],
+      ['checkout', 'Check out', R.filter(r => r.status === 'CHECKED_IN').length],
+      ['payments', 'Record payment', R.filter(r => balance(r) > 0.005).length]
+    ];
+  }
+  return [
+    ['reservations', 'Reservations', R.length], ['customers', 'Customers'],
+    ['cancels', 'Cancellation requests', R.filter(r => r.status === 'CANCEL_REQUESTED').length],
+    ['cancelled', 'Cancelled', S.cancelled.length], ['log', 'Check-in / out log']
+  ];
+}
+
+function appView() {
+  const s = S.session;
+  if (s.role === 'CUSTOMER' && S.loaded && !cust(s.id)) {
+    return '<main class="wrap work" style="padding-top:40px">' + emptyState('This account no longer exists.', 'Log out and create a new account.') + '</main>';
+  }
+  const tabs = tabsFor(s.role);
+  let sub;
+  if (s.role === 'CUSTOMER') {
+    const c = cust(s.id);
+    sub = c ? 'Customer ID <span class="mono">' + esc(c.id) + '</span> · ' + esc(c.email) : '';
+  } else if (s.role === 'STAFF') {
+    sub = 'Front desk · approvals, check-in and check-out, payments';
+  } else {
+    sub = 'Manager · records, cancellations and the check-in / out log';
+  }
+  const band = '<section class="welcome"><div class="wrap"><div>' +
+    '<div class="eyebrow">' + (s.role === 'CUSTOMER' ? 'My bookings' : 'Front desk') + '</div>' +
+    '<h1>' + esc(greeting()) + ', ' + esc(s.role === 'CUSTOMER' && cust(s.id) ? cust(s.id).firstName : sessionName()) + '</h1>' +
+    '<p>' + sub + '</p></div>' +
+    (s.role === 'CUSTOMER' ? '<button class="btn gold" data-action="tab" data-v="book">Book a table</button>' : '') +
+  '</div></section>';
+  const nav = '<nav class="tabs" role="tablist" aria-label="Menu">' + tabs.map(t =>
+    '<button role="tab" data-action="tab" data-v="' + t[0] + '" aria-selected="' + (S.tab === t[0]) + '">' + esc(t[1]) +
+    (t[2] ? '<span class="count">' + t[2] + '</span>' : '') + '</button>').join('') + '</nav>';
+  let content;
+  if (!S.loaded) content = '<p class="loading">Loading saved records…</p>';
+  else if (s.role === 'CUSTOMER') content = customerTab();
+  else if (s.role === 'STAFF') content = staffTab();
+  else content = managerTab();
+  return band + '<main class="wrap work">' + nav + content + '</main>' + footer();
+}
+
+/* ---------- customer ---------- */
+function customerTab() {
+  const id = S.session.id;
+  const mine = S.reservations.filter(r => r.customerId === id).concat(S.cancelled.filter(r => r.customerId === id))
+    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+  if (S.tab === 'book') {
+    if (S.sub && S.sub.kind === 'booked') {
+      const r = S.reservations.find(x => x.id === S.sub.id);
+      if (r) {
+        return '<div class="section"><div class="success">' +
+          '<h2>Reservation confirmed</h2>' +
+          '<div><span class="label">Your reservation ID</span><div class="big">' + esc(r.id) + '</div></div>' +
+          detailsHTML(r) +
+          '<div class="actions"><button class="btn primary" data-action="book-another">Book another table</button>' +
+          '<button class="btn" data-action="tab" data-v="mine">See my reservations</button></div>' +
+        '</div></div>';
+      }
+    }
+    return '<div class="section"><div class="section-head"><h2>Make a reservation</h2></div>' +
+      '<div class="panel">' + bookingForm('book', null) + '</div></div>';
+  }
+
+  if (S.tab === 'mine') {
+    if (S.sub) {
+      const r = mine.find(x => x.id === S.sub.id);
+      if (!r) { S.sub = null; return customerTab(); }
+      if (S.sub.kind === 'update') {
+        return '<div class="section"><div class="section-head"><h2>Update reservation <span class="mono">' + esc(r.id) + '</span></h2>' +
+          '<button class="btn" data-action="back">Back</button></div>' +
+          '<div class="split"><div class="panel"><h3>Current details</h3>' + detailsHTML(r) + '</div>' +
+          '<div class="panel"><h3>New details</h3>' + bookingForm('update', r) + '</div></div></div>';
+      }
+      if (S.sub.kind === 'cancel') {
+        const fee = round2(baseAmount(r) * CANCEL_RATE);
+        return '<div class="section"><div class="section-head"><h2>Cancel reservation <span class="mono">' + esc(r.id) + '</span></h2>' +
+          '<button class="btn" data-action="back">Back</button></div>' +
+          '<div class="panel">' + detailsHTML(r) +
+          '<div class="form-note">A cancellation fee of <b>' + peso(fee) + '</b> (' + Math.round(CANCEL_RATE * 100) + '% of the table cost) applies once the manager approves.</div>' +
+          '<div class="actions"><button class="btn danger solid" data-action="do" data-op="requestCancel" data-id="' + esc(r.id) + '"' + (S.busy ? ' disabled' : '') + '>Request cancellation</button>' +
+          '<button class="btn" data-action="back">Keep reservation</button></div></div></div>';
+      }
+      return '<div class="section"><div class="section-head"><h2>Reservation <span class="mono">' + esc(r.id) + '</span></h2>' +
+        '<button class="btn" data-action="back">Back</button></div><div class="panel">' + detailsHTML(r) + customerRowActions(r) + '</div></div>';
+    }
+    if (!mine.length) {
+      return '<div class="section"><h2>My reservations</h2>' + emptyState('You have no reservations yet.', 'Book a table from "Make a reservation".') + '</div>';
+    }
+    return '<div class="section"><div class="section-head"><h2>My reservations</h2><span class="muted">' + mine.length + ' reservation' + (mine.length > 1 ? 's' : '') + '</span></div>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>Res. ID</th><th>Date</th><th>Time</th><th class="right">Guests</th><th>Tables</th><th>Status</th><th>Payment</th><th></th></tr></thead><tbody>' +
+      mine.map(r => '<tr><td class="mono">' + esc(r.id) + '</td><td>' + esc(shortDate(r.date)) + '</td><td>' + esc(r.time) + '</td><td class="right">' + r.guests + '</td>' +
+        '<td>' + r.numTables + ' × ' + esc(TABLES[r.tableType].label) + '</td><td>' + statusPill(r) + '</td><td>' + payPill(r) + '</td>' +
+        '<td><div class="actions"><button class="btn small" data-action="sub" data-kind="detail" data-id="' + esc(r.id) + '">Details</button>' +
+        (r.status === 'CONFIRMED' ? '<button class="btn small" data-action="sub" data-kind="update" data-id="' + esc(r.id) + '">Update</button>' : '') +
+        (r.status === 'CONFIRMED' || r.status === 'PENDING_UPDATE' ? '<button class="btn small danger" data-action="sub" data-kind="cancel" data-id="' + esc(r.id) + '">Cancel</button>' : '') +
+        '</div></td></tr>').join('') +
+      '</tbody></table></div></div>';
+  }
+
+  if (S.tab === 'payments') {
+    if (!mine.length) return '<div class="section"><h2>Payment status</h2>' + emptyState('You have no reservations yet.', '') + '</div>';
+    const owed = mine.reduce((a, r) => a + balance(r), 0);
+    return '<div class="section"><div class="section-head"><h2>Payment status</h2><span>Total balance <b class="num">' + peso(owed) + '</b></span></div>' +
+      '<p class="muted">Pay at the restaurant counter. Staff record each payment here.</p>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>Res. ID</th><th>Date</th><th>Status</th><th class="right">Total</th><th class="right">Paid</th><th class="right">Balance</th><th>Payment</th></tr></thead><tbody>' +
+      mine.map(r => '<tr><td class="mono">' + esc(r.id) + '</td><td>' + esc(shortDate(r.date)) + '</td><td>' + statusPill(r) + '</td>' +
+        '<td class="right">' + peso(totalAmount(r)) + '</td><td class="right">' + peso(r.amountPaid) + '</td><td class="right"><b>' + peso(balance(r)) + '</b></td><td>' + payPill(r) + '</td></tr>').join('') +
+      '</tbody></table></div></div>';
+  }
+
+  const c = cust(id);
+  return '<div class="section"><h2>My profile</h2><div class="panel"><dl class="details">' +
+    '<dt>Customer ID</dt><dd class="mono">' + esc(c.id) + '</dd>' +
+    '<dt>First name</dt><dd>' + esc(c.firstName) + '</dd>' +
+    '<dt>Last name</dt><dd>' + esc(c.lastName || '-') + '</dd>' +
+    (c.dup > 0 ? '<dt>Saved as</dt><dd>' + esc(fullName(c)) + '</dd>' : '') +
+    '<dt>Contact</dt><dd class="mono">' + esc(c.contact) + '</dd>' +
+    '<dt>Email</dt><dd>' + esc(c.email) + '</dd>' +
+    '</dl></div></div>';
+}
+function customerRowActions(r) {
+  const b = [];
+  if (r.status === 'CONFIRMED') b.push('<button class="btn" data-action="sub" data-kind="update" data-id="' + esc(r.id) + '">Update</button>');
+  if (r.status === 'CONFIRMED' || r.status === 'PENDING_UPDATE') b.push('<button class="btn danger" data-action="sub" data-kind="cancel" data-id="' + esc(r.id) + '">Cancel</button>');
+  return b.length ? '<div class="actions">' + b.join('') + '</div>' : '';
+}
+
+/* ---------- staff & manager shared ---------- */
+function customersSection() {
+  const list = S.customers.slice().sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  if (!list.length) return '<div class="section"><h2>Customer records</h2>' + emptyState('No customers registered yet.', '') + '</div>';
+  return '<div class="section"><div class="section-head"><h2>Customer records</h2><span class="muted">' + list.length + ' customer' + (list.length > 1 ? 's' : '') + '</span></div>' +
+    '<div class="tbl-wrap"><table><thead><tr><th>Customer ID</th><th>First name</th><th>Last name</th><th>Contact</th><th>Email</th><th class="right">Reservations</th></tr></thead><tbody>' +
+    list.map(c => {
+      const n = S.reservations.filter(r => r.customerId === c.id).length;
+      const first = c.lastName ? c.firstName : fullName(c);
+      const last = c.lastName ? c.lastName + (c.dup > 0 ? '(' + c.dup + ')' : '') : '-';
+      return '<tr><td class="mono">' + esc(c.id) + '</td><td>' + esc(first) + '</td><td>' + esc(last) + '</td><td class="mono">' + esc(c.contact) + '</td><td>' + esc(c.email) + '</td><td class="right">' + n + '</td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+}
+
+function sortList(list) {
+  const byDate = (a, b) => (a.date + a.time).localeCompare(b.date + b.time);
+  if (S.sort === 'payment') return list.sort((a, b) => (PAY_ORDER[payStatus(a)] - PAY_ORDER[payStatus(b)]) || byDate(a, b));
+  return list.sort(byDate);
+}
+const FILTERS = [
+  ['ALL', 'All reservations'], ['PENDING_UPDATE', 'Pending update'], ['CONFIRMED', 'Confirmed'], ['CHECKED_IN', 'Checked-In'],
+  ['CHECKED_OUT', 'Checked-Out'], ['CANCEL_REQUESTED', 'Cancel requested'],
+  ['PAY:FULLY_PAID', 'Payment: Fully Paid'], ['PAY:PARTIALLY_PAID', 'Payment: Partially Paid'], ['PAY:UNPAID', 'Payment: Unpaid']
+];
+function applyFilter(list) {
+  let out = list;
+  if (S.filter.indexOf('PAY:') === 0) { const p = S.filter.slice(4); out = out.filter(r => payStatus(r) === p); }
+  else if (S.filter !== 'ALL') out = out.filter(r => r.status === S.filter);
+  const q = S.query.trim().toLowerCase();
+  if (q) out = out.filter(r => {
+    const c = cust(r.customerId);
+    return r.id.toLowerCase().indexOf(q) >= 0 || fullName(c).toLowerCase().indexOf(q) >= 0 || (c && c.email.indexOf(q) >= 0);
+  });
+  return out;
+}
+/* Numbered pick list: [1] name, email, ID ... (the staff "search" list) */
+function pickTable(list, actionCell) {
+  return '<div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Customer name</th><th>Email</th><th>Res. ID</th><th>Date</th><th>Time</th><th class="right">Guests</th><th>Tables</th><th>Status</th><th>Payment</th><th></th></tr></thead><tbody>' +
+    list.map((r, i) => {
+      const c = cust(r.customerId);
+      return '<tr' + (S.confirm && S.confirm.id === r.id ? ' class="hl"' : '') + '><td class="no">[' + (i + 1) + ']</td><td>' + esc(fullName(c)) + '</td><td>' + esc(c ? c.email : '-') + '</td>' +
+        '<td class="mono">' + esc(r.id) + '</td><td>' + esc(shortDate(r.date)) + '</td><td>' + esc(r.time) + '</td><td class="right">' + r.guests + '</td>' +
+        '<td>' + r.numTables + ' × ' + esc(TABLES[r.tableType].label) + '</td><td>' + statusPill(r) + '</td><td>' + payPill(r) + '</td>' +
+        '<td>' + actionCell(r) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+function reservationsSection() {
+  if (S.sub && S.sub.kind === 'detail') {
+    const r = S.reservations.find(x => x.id === S.sub.id) || S.cancelled.find(x => x.id === S.sub.id);
+    if (r) return '<div class="section"><div class="section-head"><h2>Reservation <span class="mono">' + esc(r.id) + '</span></h2>' +
+      '<button class="btn" data-action="back">Back to list</button></div><div class="panel">' + detailsHTML(r) + '</div></div>';
+    S.sub = null;
+  }
+  const all = S.reservations;
+  const head = '<div class="section-head"><h2>All reservations</h2></div>';
+  if (!all.length) return '<div class="section">' + head + emptyState('There are no reservations yet.', 'They appear here when customers book.') + '</div>';
+  const list = sortList(applyFilter(all.slice()));
+  const controls = '<div class="controls">' +
+    '<div class="field"><label for="ctl-q">Search</label><input id="ctl-q" data-ctl="query" type="search" placeholder="Name, email or RN-…" value="' + esc(S.query) + '"></div>' +
+    '<div class="field"><label for="ctl-sort">Sort by</label><select id="ctl-sort" data-ctl="sort">' +
+      '<option value="date"' + (S.sort === 'date' ? ' selected' : '') + '>Date (earliest first)</option>' +
+      '<option value="payment"' + (S.sort === 'payment' ? ' selected' : '') + '>Payment status (Paid, Partial, Unpaid)</option></select></div>' +
+    '<div class="field"><label for="ctl-filter">Show</label><select id="ctl-filter" data-ctl="filter">' +
+      FILTERS.map(f => '<option value="' + f[0] + '"' + (S.filter === f[0] ? ' selected' : '') + '>' + f[1] + '</option>').join('') + '</select></div>' +
+    '</div>';
+  return '<div class="section">' + head + controls +
+    (list.length ? pickTable(list, r => '<button class="btn small" data-action="sub" data-kind="detail" data-id="' + esc(r.id) + '">View</button>')
+      : emptyState('No reservations match.', 'Change the search or the "Show" filter.')) +
+    '</div>';
+}
+function confirmCell(r, op, label, question, danger) {
+  if (S.confirm && S.confirm.id === r.id && S.confirm.op === op) {
+    return '<div class="confirm-row"><span>' + esc(question) + '</span>' +
+      '<button class="btn small ' + (danger ? 'danger solid' : 'primary') + '" data-action="do" data-op="' + op + '" data-id="' + esc(r.id) + '"' + (S.busy ? ' disabled' : '') + '>Yes</button>' +
+      '<button class="btn small" data-action="confirm-cancel">No</button></div>';
+  }
+  return '<button class="btn small' + (danger ? ' danger' : '') + '" data-action="confirm" data-op="' + op + '" data-id="' + esc(r.id) + '">' + esc(label) + '</button>';
+}
+
+/* ---------- staff ---------- */
+function staffTab() {
+  const R = S.reservations;
+  if (S.tab === 'customers') return customersSection();
+  if (S.tab === 'updates') {
+    const list = sortList(R.filter(r => r.status === 'PENDING_UPDATE'));
+    if (!list.length) return '<div class="section"><h2>Update requests</h2>' + emptyState('There are no update requests waiting for approval.', '') + '</div>';
+    return '<div class="section"><h2>Update requests</h2><div class="cards">' + list.map((r, i) => {
+      const c = cust(r.customerId);
+      return '<article class="card"><div class="card-head"><div><span class="no">[' + (i + 1) + ']</span> <b>' + esc(fullName(c)) + '</b> <span class="muted">' + esc(c ? c.email : '') + '</span><div class="mono">' + esc(r.id) + '</div></div>' + payPill(r) + '</div>' +
+        pendingHTML(r) +
+        '<div class="actions"><button class="btn primary" data-action="do" data-op="approveUpdate" data-id="' + esc(r.id) + '"' + (S.busy ? ' disabled' : '') + '>Approve</button>' +
+        '<button class="btn" data-action="do" data-op="rejectUpdate" data-id="' + esc(r.id) + '"' + (S.busy ? ' disabled' : '') + '>Reject</button>' +
+        '<button class="btn link" data-action="sub" data-kind="detail" data-id="' + esc(r.id) + '" data-tab="reservations">Full details</button></div></article>';
+    }).join('') + '</div></div>';
+  }
+  if (S.tab === 'checkin') {
+    const list = sortList(R.filter(r => r.status === 'CONFIRMED'));
+    return '<div class="section"><h2>Check in customer</h2>' + (list.length
+      ? '<p class="muted">Verify the guest, then check them in. Each check-in is added to the check-in / out log.</p>' +
+        pickTable(list, r => confirmCell(r, 'checkIn', 'Check in', 'Check in ' + custName(r.customerId) + '?'))
+      : emptyState('There are no confirmed reservations waiting for check-in.', '')) + '</div>';
+  }
+  if (S.tab === 'checkout') {
+    const list = sortList(R.filter(r => r.status === 'CHECKED_IN'));
+    return '<div class="section"><h2>Check out customer</h2>' + (list.length
+      ? '<p class="muted">A guest can be checked out once the balance is fully paid.</p>' +
+        pickTable(list, r => balance(r) > 0.005
+          ? '<span class="muted">Owes ' + peso(balance(r)) + ' · </span><button class="btn small link" data-action="tab" data-v="payments">Record payment</button>'
+          : confirmCell(r, 'checkOut', 'Check out', 'Check out ' + custName(r.customerId) + '?'))
+      : emptyState('No customers are checked in right now.', '')) + '</div>';
+  }
+  if (S.tab === 'payments') {
+    const list = sortList(R.filter(r => balance(r) > 0.005));
+    if (!list.length) return '<div class="section"><h2>Record payment</h2>' + emptyState('There are no reservations with an unpaid balance.', '') + '</div>';
+    return '<div class="section"><h2>Record payment</h2><p class="muted">Enter the amount the customer paid at the counter.</p>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>No.</th><th>Customer name</th><th>Email</th><th>Res. ID</th><th>Status</th><th class="right">Total</th><th class="right">Paid</th><th class="right">Balance</th><th>Amount received</th></tr></thead><tbody>' +
+      list.map((r, i) => {
+        const c = cust(r.customerId); const form = 'pay-' + r.id;
+        const err = (S.errors[form] || {}).amount;
+        return '<tr><td class="no">[' + (i + 1) + ']</td><td>' + esc(fullName(c)) + '</td><td>' + esc(c ? c.email : '-') + '</td><td class="mono">' + esc(r.id) + '</td><td>' + statusPill(r) + '</td>' +
+          '<td class="right">' + peso(totalAmount(r)) + '</td><td class="right">' + peso(r.amountPaid) + '</td><td class="right"><b>' + peso(balance(r)) + '</b></td>' +
+          '<td class="wrap-cell"><form class="pay-form" data-form="' + form + '" novalidate><div class="field' + (err ? ' has-err' : '') + '">' +
+          '<input id="' + form + '-amount" data-f="' + form + '" data-k="amount" inputmode="decimal" placeholder="e.g. 500" aria-label="Amount received for ' + esc(r.id) + '" value="' + esc(fv(form).amount || '') + '"' + (err ? ' aria-invalid="true"' : '') + '>' +
+          (err ? '<p class="err">' + esc(err) + '</p>' : '') + '</div>' +
+          '<button class="btn small primary" type="submit"' + (S.busy ? ' disabled' : '') + '>Record</button></form></td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  }
+  return reservationsSection();
+}
+
+/* ---------- manager ---------- */
+function managerTab() {
+  if (S.tab === 'customers') return customersSection();
+  if (S.tab === 'cancels') {
+    const list = sortList(S.reservations.filter(r => r.status === 'CANCEL_REQUESTED'));
+    if (!list.length) return '<div class="section"><h2>Cancellation requests</h2>' + emptyState('There are no cancellation requests.', '') + '</div>';
+    return '<div class="section"><h2>Cancellation requests</h2><p class="muted">Approving moves the reservation to the cancelled records and charges ' + Math.round(CANCEL_RATE * 100) + '% of the table cost. Rejecting makes it Confirmed again.</p>' +
+      pickTable(list, r => {
+        const fee = round2(baseAmount(r) * CANCEL_RATE);
+        if (S.confirm && S.confirm.id === r.id) return confirmCell(r, 'approveCancel', '', 'Approve and charge ' + peso(fee) + '?', true);
+        return '<div class="actions"><button class="btn small danger" data-action="confirm" data-op="approveCancel" data-id="' + esc(r.id) + '">Approve</button>' +
+          '<button class="btn small" data-action="do" data-op="rejectCancel" data-id="' + esc(r.id) + '"' + (S.busy ? ' disabled' : '') + '>Reject</button></div>';
+      }) + '</div>';
+  }
+  if (S.tab === 'cancelled') {
+    const list = sortList(S.cancelled.slice());
+    if (!list.length) return '<div class="section"><h2>Cancelled reservations</h2>' + emptyState('No reservations have been cancelled.', '') + '</div>';
+    return '<div class="section"><h2>Cancelled reservations</h2><p class="muted">Cancelled reservations are kept here instead of being deleted. The total is the cancellation fee.</p>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>Res. ID</th><th>Customer name</th><th>Email</th><th>Date</th><th>Tables</th><th class="right">Fee charged</th><th class="right">Paid</th><th class="right">Balance</th><th class="right">Refund due</th><th>Payment</th></tr></thead><tbody>' +
+      list.map(r => {
+        const c = cust(r.customerId);
+        return '<tr><td class="mono">' + esc(r.id) + '</td><td>' + esc(fullName(c)) + '</td><td>' + esc(c ? c.email : '-') + '</td><td>' + esc(shortDate(r.date)) + '</td><td>' + r.numTables + ' × ' + esc(TABLES[r.tableType].label) + '</td>' +
+          '<td class="right">' + peso(totalAmount(r)) + '</td><td class="right">' + peso(r.amountPaid) + '</td><td class="right">' + peso(balance(r)) + '</td><td class="right">' + peso(refundDue(r)) + '</td><td>' + payPill(r) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  }
+  if (S.tab === 'log') {
+    const list = S.statuslog.slice().sort((a, b) => b.ts.localeCompare(a.ts) || b.id.localeCompare(a.id));
+    if (!list.length) return '<div class="section"><h2>Check-in / out log</h2>' + emptyState('No check-ins or check-outs recorded yet.', '') + '</div>';
+    return '<div class="section"><h2>Check-in / out log</h2>' +
+      '<div class="tbl-wrap"><table><thead><tr><th>Time stamp</th><th>Res. ID</th><th>Customer ID</th><th>Customer name</th><th>Status</th></tr></thead><tbody>' +
+      list.map(e => '<tr><td>' + esc(e.ts) + '</td><td class="mono">' + esc(e.reservationId) + '</td><td class="mono">' + esc(e.customerId) + '</td><td>' + esc(e.customerName) + '</td><td>' +
+        pill(e.status === 'Checked-In' ? 'p-ok' : 'p-mute', e.status) + '</td></tr>').join('') +
+      '</tbody></table></div></div>';
+  }
+  return reservationsSection();
+}
+
+/* ======================================================================
+   Render loop (keeps focus and cursor position across re-renders)
+   ====================================================================== */
+function render() {
+  const app = document.getElementById('app');
+  const a = document.activeElement;
+  let focusId = null, ss = null, se = null;
+  if (a && a.id && app.contains(a)) {
+    focusId = a.id;
+    try { ss = a.selectionStart; se = a.selectionEnd; } catch (e) { /* not a text input */ }
+  }
+  app.innerHTML = topBar() + (S.view === 'app' && S.session ? appView() : S.view === 'account' ? accountView() : homeView());
+  if (focusId) {
+    const el = document.getElementById(focusId);
+    if (el) {
+      el.focus({ preventScroll: true });
+      try { if (ss != null) el.setSelectionRange(ss, se); } catch (e) { /* ignore */ }
+    }
+  }
+}
+let toastTimer = null;
+function toast(msg, bad) {
+  const t = document.getElementById('toast');
+  t.innerHTML = '<div class="t' + (bad ? ' bad' : '') + '">' + esc(msg) + '</div>';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.innerHTML = ''; }, bad ? 6500 : 4000);
+}
+
+/* ======================================================================
+   Events
+   ====================================================================== */
+function goBack() {
+  if (S.confirm) { S.confirm = null; render(); return; }
+  if (S.sub) { S.sub = null; render(); return; }
+}
+
+/* Booking from the home page (booking bar or a table card). Signed-in customers go straight
+   to the booking form with the details filled in; everyone else signs in first. */
+function startBooking() {
+  const s = S.session;
+  if (s && s.role !== 'CUSTOMER') { toast('Booking is for customers. Log out of the ' + roleLabel(s.role).toLowerCase() + ' account first.', true); return; }
+  if (s) {
+    S.view = 'app'; S.tab = 'book'; S.sub = null; S.confirm = null;
+    resetForm('book', S.pendingBook || null); S.pendingBook = null; saveSession();
+  } else {
+    S.view = 'account'; if (S.homeTab === 'staff') S.homeTab = 'login';
+  }
+  render(); window.scrollTo(0, 0);
+}
+
+const SUBMIT = {
+  hero() {
+    const res = runCheck('hero', true);
+    if (!res.ok) return render();
+    const v = res.values;
+    S.pendingBook = Object.assign({}, S.pendingBook || {}, { date: v.date, time: v.time, guests: String(v.guests) });
+    startBooking();
+  },
+  loginCustomer() {
+    const res = runCheck('loginCustomer', true);
+    if (!res.ok) return render();
+    signIn({ role: 'CUSTOMER', id: res.values.email.id });
+    toast('Welcome, ' + fullName(res.values.email) + '!');
+    render();
+  },
+  loginStaff() {
+    const res = runCheck('loginStaff', true);
+    if (!res.ok) return render();
+    const e = res.values.employee;
+    signIn({ role: e.role, username: e.username, name: e.name });
+    toast('Welcome, ' + e.name + '! Logged in as ' + (e.role === 'STAFF' ? 'Staff' : 'Manager') + '.');
+    render();
+  },
+  register() {
+    const res = runCheck('register', true);
+    if (!res.ok) return render();
+    run(() => Actions.register(res.values), c => {
+      const v = res.values;
+      return 'Registration successful! Your Customer ID is ' + c.id + '.' + (c.dup > 0 ? ' The name ' + v.first + ' ' + v.last + ' is already registered, so your name was saved as ' + fullName(c) + '.' : '');
+    }).then(c => {
+      resetForm('register');
+      signIn({ role: 'CUSTOMER', id: c.id });
+      render();
+    }).catch(() => {});
+  },
+  book() {
+    const res = runCheck('book', true);
+    if (!res.ok) return render();
+    run(() => Actions.makeReservation(res.values), r => 'Reservation confirmed! Your Reservation ID is ' + r.id + '.')
+      .then(r => { resetForm('book'); S.sub = { kind: 'booked', id: r.id }; render(); }).catch(() => {});
+  },
+  update() {
+    const res = runCheck('update', true);
+    if (!res.ok) return render();
+    const r = S.reservations.find(x => x.id === S.sub.id);
+    if (!r) return;
+    const v = res.values;
+    const ch = { date: v.date, time: v.time, guests: v.guests, tableType: v.type, numTables: v.tables };
+    if (sameAs(r, ch)) { S.formMsg.update = 'Nothing was changed. Edit at least one detail, or go back.'; return render(); }
+    S.formMsg.update = '';
+    run(() => Actions.requestUpdate(r.id, ch), 'Update request sent. It shows as Pending Update until staff approve it.')
+      .then(() => { S.sub = null; render(); }).catch(() => {});
+  }
+};
+
+document.addEventListener('submit', e => {
+  const form = e.target.closest('form[data-form]');
+  if (!form) return;
+  e.preventDefault();
+  const name = form.getAttribute('data-form');
+  if (name.indexOf('pay-') === 0) {
+    const res = runCheck(name, true);
+    if (!res.ok) return render();
+    const id = name.slice(4);
+    run(() => Actions.recordPayment(id, res.values.amount), r => 'Payment recorded. New balance: ' + peso(balance(r)) + ' (' + PAY[payStatus(r)] + ').')
+      .then(() => { resetForm(name); render(); }).catch(() => {});
+    return;
+  }
+  if (SUBMIT[name]) SUBMIT[name]();
+});
+
+/* Update one field's error message in place, without redrawing the page
+   (redrawing while focus moves between fields would drop the cursor). */
+function patchField(form, key) {
+  const input = document.getElementById(form + '-' + key);
+  if (!input || input.type === 'radio') return;
+  const wrap = input.closest('.field');
+  if (!wrap) return;
+  const err = (S.errors[form] || {})[key];
+  const hint = wrap.querySelector('.hint');
+  let p = wrap.querySelector('.err');
+  wrap.classList.toggle('has-err', !!err);
+  if (err) {
+    if (!p) { p = document.createElement('p'); p.className = 'err'; p.id = input.id + '-err'; wrap.appendChild(p); }
+    p.textContent = err;
+    input.setAttribute('aria-invalid', 'true');
+    input.setAttribute('aria-describedby', p.id);
+    if (hint) hint.hidden = true;
+  } else {
+    if (p) p.remove();
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
+    if (hint) hint.hidden = false;
+  }
+}
+function patchForm(form) {
+  (FIELD_ORDER[form] || ['amount']).forEach(k => patchField(form, k));
+}
+
+document.addEventListener('input', e => {
+  const el = e.target;
+  const ctl = el.getAttribute && el.getAttribute('data-ctl');
+  if (ctl === 'query') { S.query = el.value; render(); return; }
+  const form = el.getAttribute && el.getAttribute('data-f');
+  if (!form) return;
+  const key = el.getAttribute('data-k');
+  fv(form)[key] = el.value;
+  if (S.errors[form] && S.errors[form][key]) runCheck(form, false);
+  /* the booking forms show live hints (tables needed, cost), so they redraw; focus is kept */
+  if (form === 'book' || form === 'update' || el.type === 'radio') render();
+  else patchForm(form);
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  const ctl = el.getAttribute && el.getAttribute('data-ctl');
+  if (ctl === 'sort' || ctl === 'filter') { S[ctl] = el.value; render(); return; }
+  const form = el.getAttribute && el.getAttribute('data-f');
+  if (!form || form.indexOf('pay-') === 0) return;
+  const key = el.getAttribute('data-k');
+  fv(form)[key] = el.value;
+  (S.touched[form] || (S.touched[form] = {}))[key] = true;
+  runCheck(form, false);
+  if (el.type === 'radio') render();
+  else patchForm(form);
+});
+
+/* Typing \ in a field goes back to the previous field; in the first field it goes back to the list or menu. */
+document.addEventListener('keydown', e => {
+  if (e.key !== '\\') return;
+  const el = e.target;
+  if (!(el instanceof HTMLInputElement) || el.type === 'search') return;
+  e.preventDefault();
+  const form = el.closest('form');
+  if (!form) return;
+  const stops = [];
+  const seenRadio = new Set();
+  form.querySelectorAll('input').forEach(x => {
+    if (x.disabled || x.type === 'hidden') return;
+    if (x.type === 'radio') {
+      if (seenRadio.has(x.name)) return;
+      seenRadio.add(x.name);
+      const checked = form.querySelector('input[type=radio][name="' + x.name + '"]:checked');
+      stops.push({ el: checked || x, name: x.name });
+      return;
+    }
+    stops.push({ el: x });
+  });
+  const idx = stops.findIndex(s => s.el === el || (el.type === 'radio' && s.name === el.name));
+  if (idx > 0) { stops[idx - 1].el.focus(); return; }
+  if (S.sub || S.confirm) goBack();
+  else toast('This is the first field.');
+});
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const act = el.getAttribute('data-action');
+  const id = el.getAttribute('data-id');
+  if (act === 'home-tab') { S.homeTab = el.getAttribute('data-v'); render(); return; }
+  if (act === 'go-home') { S.view = 'home'; S.sub = null; S.confirm = null; render(); window.scrollTo(0, 0); return; }
+  if (act === 'open-account') { S.view = 'account'; S.homeTab = el.getAttribute('data-v') || 'login'; render(); window.scrollTo(0, 0); return; }
+  if (act === 'open-app') { S.view = 'app'; if (!S.tab) S.tab = DEFAULT_TAB[S.session.role]; render(); window.scrollTo(0, 0); return; }
+  if (act === 'start-booking') { startBooking(); return; }
+  if (act === 'book-type') { S.pendingBook = Object.assign({}, S.pendingBook || {}, { type: el.getAttribute('data-v') }); startBooking(); return; }
+  if (act === 'scroll') { const t = document.getElementById(el.getAttribute('data-v')); if (t) t.scrollIntoView({ block: 'start' }); return; }
+  if (act === 'logout') { signOut(); render(); return; }
+  if (act === 'tab') {
+    S.view = 'app'; S.tab = el.getAttribute('data-v'); S.sub = null; S.confirm = null; saveSession();
+    if (S.tab === 'book') resetForm('book');
+    render(); window.scrollTo(0, 0); return;
+  }
+  if (act === 'sub') {
+    const kind = el.getAttribute('data-kind');
+    const t = el.getAttribute('data-tab');
+    if (t) S.tab = t;
+    S.sub = { kind, id }; S.confirm = null;
+    if (kind === 'update') {
+      const r = S.reservations.find(x => x.id === id);
+      if (r) resetForm('update', { date: r.date, time: r.time, guests: String(r.guests), type: r.tableType, tables: String(r.numTables) });
+    }
+    render(); window.scrollTo(0, 0); return;
+  }
+  if (act === 'back') { goBack(); return; }
+  if (act === 'book-another') { S.sub = null; resetForm('book'); render(); return; }
+  if (act === 'confirm') { S.confirm = { id, op: el.getAttribute('data-op') }; render(); return; }
+  if (act === 'confirm-cancel') { S.confirm = null; render(); return; }
+  if (act === 'do') {
+    const op = el.getAttribute('data-op');
+    const msgs = {
+      requestCancel: 'Cancellation request sent to the manager for approval.',
+      approveUpdate: fee => 'Update approved and saved.' + (fee > 0 ? ' A reschedule fee of ' + peso(fee) + ' was added.' : ''),
+      rejectUpdate: 'Update rejected. The original details are kept.',
+      checkIn: 'Customer checked in. Added to the check-in / out log.',
+      checkOut: 'Customer checked out. Added to the check-in / out log.',
+      approveCancel: fee => 'Cancellation approved. Fee charged: ' + peso(fee) + '. Moved to cancelled records.',
+      rejectCancel: 'Cancellation rejected. The reservation is Confirmed again.'
+    };
+    run(() => Actions[op](id), msgs[op]).then(() => { if (op === 'requestCancel') S.sub = null; render(); }).catch(() => {});
+  }
+});
+
+/* ======================================================================
+   Start
+   ====================================================================== */
+loadSession();
+render();
+Store.init();
+</script>
+</body>
+</html>
